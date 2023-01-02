@@ -85,6 +85,10 @@ app.get("/:customListName", function(req, res){
   })
 })
 
+app.get("/about", function(req, res) {
+  res.render("about");
+})
+
 app.post("/", function(req, res) {
   const itemName = req.body.newTodoItem;
   const listName = req.body.list;
@@ -106,21 +110,29 @@ app.post("/", function(req, res) {
   }
 })
 
-app.get("/about", function(req, res) {
-  res.render("about");
-})
-
 app.post("/delete", function(req, res){
   const checkedItemId = req.body.checkbox;
-  Item.findByIdAndRemove(checkedItemId, function(err){
-    if(err){
-      console.log(err);
-    }
-    else{
-      console.log("Successfully deleted!");
-    }
-  })
-  res.redirect("/");
+  const listName = req.body.listName;
+
+  if(listName == "Today"){
+    Item.findByIdAndRemove(checkedItemId, function(err){
+      if(err){
+        console.log(err);
+      }
+      else{
+        console.log("Successfully deleted!");
+      }
+    })
+    res.redirect("/");
+  }
+  else{
+    List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedItemId}}}, function(err, foundList){
+      if(!err) {
+        res.redirect("/" + listName);
+      }
+    })
+  }
+
 })
 
 app.listen(3000, function() {
