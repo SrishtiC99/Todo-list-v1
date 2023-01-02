@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
-const date = require(__dirname + "/date.js");
 
 const app = express();
 app.use(bodyParser.urlencoded({
@@ -34,8 +33,14 @@ const item3 = new Item({
 
 const defeaultItems = [item1, item2, item3];
 
+const listSchema = new mongoose.Schema({
+  name: String,
+  items: [itemSchema]
+})
+
+const List = new mongoose.model("List", listSchema);
+
 app.get("/", function(req, res) {
-  let day = date.getDate();
   Item.find(function(err, foundItems){
     if(err){
       console.log(err);
@@ -51,27 +56,54 @@ app.get("/", function(req, res) {
         })
       }
       res.render("list", {
-        listTitle: day,
+        listTitle: "Today",
         newTodoItems: foundItems
       });
     }
   })
 });
 
+app.get("/:customListName", function(req, res){
+  const customListName = req.params.customListName;
+  List.findOne({name: customListName}, function(err, foundList){
+    if(!err){
+      if(!foundList){
+        const list = new List({
+          name: customListName,
+          items: defeaultItems
+        });
+        list.save();
+        res.redirect("/" + customListName)
+      }
+      else{
+        res.render("list", {
+          listTitle: foundList.name,
+          newTodoItems: foundList.items
+        });
+      }
+    }
+  })
+})
+
 app.post("/", function(req, res) {
   const itemName = req.body.newTodoItem;
+  const listName = req.body.list;
   const item = new Item({
     name: itemName
   })
-  item.save();
-  res.redirect("/");
-})
-
-app.get("/work", function(req, res) {
-  res.render("list", {
-    listTitle: "Work",
-    newTodoItems: workItems
-  })
+  if(listName === "Today"){
+    item.save();
+    res.redirect("/");
+  }
+  else{
+    List.findOne({name: listName}, function(err, foundList){
+      if(!err){
+        foundList.items.push(item);
+        foundList.save();
+        res.redirect("/" + listName);
+      }
+    })
+  }
 })
 
 app.get("/about", function(req, res) {
