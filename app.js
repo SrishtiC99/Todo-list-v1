@@ -2,7 +2,6 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
 const date = require(__dirname + "/date.js");
-console.log(date);
 
 const app = express();
 app.use(bodyParser.urlencoded({
@@ -34,34 +33,38 @@ const item3 = new Item({
 });
 
 const defeaultItems = [item1, item2, item3];
-Item.insertMany(defeaultItems, function(err){
-  if(err){
-    console.log(err);
-  }else{
-    console.log("Successfully saved defaults item to DB");
-  }
-})
-
-const todoItems = ["Buy Food", "Cook Food", "Eat Food"];
-let workItems = [];
 
 app.get("/", function(req, res) {
   let day = date.getDate();
-  res.render("list", {
-    listTitle: day,
-    newTodoItems: todoItems
-  });
+  Item.find(function(err, foundItems){
+    if(err){
+      console.log(err);
+    }
+    else{
+      if(foundItems.length === 0){
+        Item.insertMany(defeaultItems, function(err){
+          if(err){
+            console.log(err);
+          }else{
+            console.log("Successfully saved defaults item to DB");
+          }
+        })
+      }
+      res.render("list", {
+        listTitle: day,
+        newTodoItems: foundItems
+      });
+    }
+  })
 });
 
 app.post("/", function(req, res) {
-  item = req.body.newTodoItem;
-  if (req.body.list === "Work") {
-    workItems.push(item);
-    res.redirect("/work");
-  } else {
-    todoItems.push(item);
-    res.redirect("/");
-  }
+  const itemName = req.body.newTodoItem;
+  const item = new Item({
+    name: itemName
+  })
+  item.save();
+  res.redirect("/");
 })
 
 app.get("/work", function(req, res) {
